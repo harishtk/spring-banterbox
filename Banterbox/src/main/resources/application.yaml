@@ -1,0 +1,31 @@
+spring:
+  application:
+    name: "Banter Box"
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/banterbox_db
+    username: postgres
+    password: postgres
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+
+  jwt:
+    secret: ${SPRING_JWT_SECRET}
+    accessTokenExpiration: 7200 # 2h
+    refreshTokenExpiration: 604800 # 7d
+
+server:
+  port: 8000
+
