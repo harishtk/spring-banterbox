@@ -3,16 +3,16 @@ package space.banterbox.feature.authentication.service;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import space.banterbox.feature.authentication.config.JwtConfig;
 import space.banterbox.feature.authentication.model.Jwt;
-import space.banterbox.feature.users.model.User;
+import space.banterbox.feature.user.model.User;
 
 import java.util.Date;
 
+@RequiredArgsConstructor
 @Service
-@AllArgsConstructor
 public class JwtService {
     
     private final JwtConfig jwtConfig;

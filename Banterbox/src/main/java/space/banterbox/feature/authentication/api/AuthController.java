@@ -11,13 +11,13 @@ import space.banterbox.feature.authentication.config.JwtConfig;
 import space.banterbox.feature.authentication.dto.request.LoginRequestDto;
 import space.banterbox.feature.authentication.dto.response.JwtResponse;
 import space.banterbox.feature.authentication.service.AuthService;
-import space.banterbox.feature.users.dto.response.UserResponseDto;
-import space.banterbox.feature.users.exception.UserNotFoundException;
-import space.banterbox.feature.users.mapper.UserMapper;
+import space.banterbox.feature.user.dto.response.UserResponseDto;
+import space.banterbox.feature.user.exception.UserNotFoundException;
+import space.banterbox.feature.user.mapper.UserMapper;
 
 @AllArgsConstructor
 @RestController
-@RequestMapping("/auth")
+@RequestMapping("/api/v1/auth")
 public class AuthController {
 
     private final UserMapper userMapper;
@@ -60,11 +60,13 @@ public class AuthController {
 
     @ExceptionHandler(BadCredentialsException.class)
     public ResponseEntity<Void> handleBadCredentialsException() {
+        System.out.println("here..2 ");
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
     }
 
     @ExceptionHandler(UserNotFoundException.class)
     public ResponseEntity<Void> handleUserNotFoundException() {
+        System.out.println("here..");
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
     }
 }

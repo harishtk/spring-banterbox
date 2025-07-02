@@ -1,7 +1,7 @@
 -- Enable UUID generation
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- Users table
+-- Users' table
 CREATE TABLE IF NOT EXISTS users
 (
     id                 UUID PRIMARY KEY      DEFAULT gen_random_uuid(),
@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS profiles
     CONSTRAINT fk_user FOREIGN KEY (id) REFERENCES users (id) ON DELETE CASCADE
 );
 
--- Followers table (self-referencing many-to-many)
+-- Follower table (self-referencing many-to-many)
 CREATE TABLE IF NOT EXISTS users_followers
 (
     follower_id  UUID      NOT NULL,
@@ -31,3 +31,12 @@ CREATE TABLE IF NOT EXISTS users_followers
     CONSTRAINT fk_follower FOREIGN KEY (follower_id) REFERENCES users (id) ON DELETE CASCADE,
     CONSTRAINT fk_following FOREIGN KEY (following_id) REFERENCES users (id) ON DELETE CASCADE
 );
+
+-- For fast lookup of followers of user
+CREATE INDEX IF NOT EXISTS idx_following_id ON users_followers (following_id);
+
+-- For fast lookup of following of user
+CREATE INDEX IF NOT EXISTS idx_follower_id ON users_followers (follower_id);
+
+-- Profile lookup
+CREATE INDEX IF NOT EXISTS idx_profile_id ON profiles (id);

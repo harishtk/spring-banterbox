@@ -9,8 +9,10 @@ import org.springframework.stereotype.Service;
 import space.banterbox.feature.authentication.dto.request.LoginRequestDto;
 import space.banterbox.feature.authentication.dto.response.LoginResponseDto;
 import space.banterbox.feature.authentication.model.Jwt;
-import space.banterbox.feature.users.model.User;
-import space.banterbox.feature.users.service.UserRepository;
+import space.banterbox.feature.user.model.User;
+import space.banterbox.feature.user.repository.UserRepository;
+
+import java.util.UUID;
 
 @AllArgsConstructor
 @Service
@@ -24,7 +26,7 @@ public class AuthService {
     public User getCurrentUser() {
         // Get user object from auth
         var auth = SecurityContextHolder.getContext().getAuthentication();
-        var userId = (Long) auth.getPrincipal();
+        var userId = (UUID) auth.getPrincipal();
 
         return userRepository.findById(userId).orElse(null);
     }

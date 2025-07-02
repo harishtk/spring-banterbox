@@ -3,10 +3,11 @@ package space.banterbox.feature.authentication.model;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
-import space.banterbox.feature.users.model.Role;
+import space.banterbox.feature.user.model.Role;
 
 import javax.crypto.SecretKey;
 import java.util.Date;
+import java.util.UUID;
 
 public class Jwt {
     private final Claims claims;
@@ -22,8 +23,8 @@ public class Jwt {
         catch (JwtException e) { return false; }
     }
 
-    public Long getUserId() {
-        return Long.valueOf(claims.getSubject());
+    public UUID getUserId() {
+        return UUID.fromString(claims.getSubject());
     }
 
     public Role getUserRole() {

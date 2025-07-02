@@ -22,10 +22,9 @@ spring:
     baseline-on-migrate: true
 
   jwt:
-    secret: ${SPRING_JWT_SECRET}
+    secret: "qrxyFL4NWaV8GDXRYSSu8Jguw4d/zQtlSRx29617DFb4PK4MI0VWzs9x1gqmn37Cr7BS4fZsaMKA9OWxkwqqzQ=="
     accessTokenExpiration: 7200 # 2h
     refreshTokenExpiration: 604800 # 7d
 
 server:
   port: 8000
-
