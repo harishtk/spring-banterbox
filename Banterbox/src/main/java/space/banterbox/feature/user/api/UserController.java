@@ -6,17 +6,20 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.util.UriComponentsBuilder;
+import space.banterbox.core.dto.ErrorDto;
 import space.banterbox.core.response.PagedResponse;
 import space.banterbox.feature.authentication.service.AuthService;
 import space.banterbox.feature.user.dto.request.CreateUserRequestDto;
 import space.banterbox.feature.user.dto.request.UpdatePasswordRequestDto;
 import space.banterbox.feature.user.dto.request.UpdateUserRequestDto;
-import space.banterbox.feature.user.dto.response.ProfileDto;
+import space.banterbox.feature.user.dto.response.UserProfileDto;
 import space.banterbox.feature.user.dto.response.UserPreviewDto;
 import space.banterbox.feature.user.dto.response.UserResponseDto;
+import space.banterbox.feature.user.exception.ProfileNotFoundException;
 import space.banterbox.feature.user.mapper.UserMapper;
 import space.banterbox.feature.user.model.Role;
 import space.banterbox.feature.user.repository.UserRepository;
@@ -39,9 +42,9 @@ public class UserController {
     public ResponseEntity<List<UserResponseDto>> getUsers(
             @RequestParam(defaultValue = "name", required = false, name = "sort") String sortBy
     ) {
-        final Set<String> supportedSortBy = Set.of("name", "email");
+        final Set<String> supportedSortBy = Set.of("username");
         if (!supportedSortBy.contains(sortBy)) {
-            sortBy = "name";
+            sortBy = "username";
         }
 
         return ResponseEntity.ok(
@@ -129,7 +132,7 @@ public class UserController {
 
     /* Profile */
     @GetMapping("/me")
-    public ResponseEntity<ProfileDto> getMyProfile() {
+    public ResponseEntity<UserProfileDto> getMyProfile() {
         var user = authService.getCurrentUser();
 
         if (user == null) {
@@ -165,16 +168,11 @@ public class UserController {
         return ResponseEntity.noContent().build();
     }
 
-    @GetMapping("/{id}/followers")
+    @GetMapping("/followers")
     public ResponseEntity<PagedResponse<UserPreviewDto>> getFollowers(
-            @PathVariable("id") UUID userId,
+            @AuthenticationPrincipal UUID userId,
             @RequestParam(name = "page", defaultValue = "0") int page,
             @RequestParam(name = "size", defaultValue = "20") int size) {
-        var currentUser = authService.getCurrentUser();
-
-        if (Objects.equals(userId, currentUser.getId())) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-        }
 
         Page<UserPreviewDto> pagedData = userService.getFollowers(userId, page, size);
 
@@ -190,17 +188,11 @@ public class UserController {
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/{id}/following")
+    @GetMapping("/following")
     public ResponseEntity<PagedResponse<UserPreviewDto>> getFollowing(
-            @PathVariable("id") UUID userId,
+            @AuthenticationPrincipal UUID userId,
             @RequestParam(name = "page", defaultValue = "0") int page,
             @RequestParam(name = "size", defaultValue = "20") int size) {
-        var currentUser = authService.getCurrentUser();
-
-        if (Objects.equals(userId, currentUser.getId())) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-        }
-
         Page<UserPreviewDto> pagedData = getUserServiceFollowing(userId, page, size);
 
         var response = new PagedResponse<>(
@@ -220,4 +212,10 @@ public class UserController {
     }
     /* END - User follows/followers */
 
+    @ExceptionHandler(ProfileNotFoundException.class)
+    public ResponseEntity<ErrorDto> handleProfileNotFoundException(ProfileNotFoundException exception) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                new ErrorDto(exception.getMessage())
+        );
+    }
 }

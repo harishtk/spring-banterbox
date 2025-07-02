@@ -14,4 +14,6 @@ public class PostDto {
     private String authorUsername;
     private String content;
     Instant createdAt;
+
+    private long likesCount;
 }

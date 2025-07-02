@@ -10,8 +10,10 @@ import org.springframework.web.util.UriComponentsBuilder;
 import space.banterbox.core.response.PagedResponse;
 import space.banterbox.feature.post.dto.PostDto;
 import space.banterbox.feature.post.dto.request.CreatePostRequest;
+import space.banterbox.feature.post.feed.service.PostFeedService;
 import space.banterbox.feature.post.service.PostService;
 
+import java.util.Map;
 import java.util.UUID;
 
 @RequiredArgsConstructor
@@ -20,6 +22,7 @@ import java.util.UUID;
 public class PostController {
 
     private final PostService postService;
+    private final PostFeedService postFeedService;
 
     @PostMapping
     public ResponseEntity<Void> createPost(
@@ -36,7 +39,7 @@ public class PostController {
             @RequestParam(name = "page", defaultValue = "0") int page,
             @RequestParam(name = "size", defaultValue = "20") int size
     ) {
-        Page<PostDto> pagedData = postService.getGlobalFeed(page, size);
+        Page<PostDto> pagedData = postFeedService.getGlobalFeed(page, size);
         return ResponseEntity.ok(getPagedResponse(pagedData));
     }
 
@@ -46,8 +49,32 @@ public class PostController {
             @RequestParam(name = "page", defaultValue = "0") int page,
             @RequestParam(name = "size", defaultValue = "20") int size
     ) {
-        Page<PostDto> pagedData = postService.getPrivateFeed(userId, page, size);
+        Page<PostDto> pagedData     = postFeedService.getPrivateFeed(userId, page, size);
         return ResponseEntity.ok(getPagedResponse(pagedData));
+    }
+
+    @PostMapping("/{postId}/like")
+    public ResponseEntity<Void> likePost(
+            @AuthenticationPrincipal UUID userId,
+            @PathVariable("postId") UUID postId
+    ) {
+        postService.likePost(userId, postId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/{postId}/like")
+    public ResponseEntity<Void> unlikePost(
+            @AuthenticationPrincipal UUID userId,
+            @PathVariable("postId") UUID postId
+    ) {
+        postService.unlikePost(userId, postId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/{postId}/likes/count")
+    public ResponseEntity<Map<String, Long>> getPostLikesCount(@PathVariable("postId") UUID postId) {
+        long count = postService.countLikes(postId);
+        return ResponseEntity.ok(Map.of("likes", count));
     }
 
     private <T> PagedResponse<T> getPagedResponse(Page<T> pagedData) {

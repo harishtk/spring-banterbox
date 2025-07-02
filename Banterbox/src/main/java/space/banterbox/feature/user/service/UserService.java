@@ -4,8 +4,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
-import space.banterbox.feature.user.dto.response.ProfileDto;
+import space.banterbox.feature.user.dto.response.UserProfileDto;
 import space.banterbox.feature.user.dto.response.UserPreviewDto;
+import space.banterbox.feature.user.exception.ProfileNotFoundException;
 import space.banterbox.feature.user.mapper.ProfileMapper;
 import space.banterbox.feature.user.model.UsersFollower;
 import space.banterbox.feature.user.model.UsersFollowerId;
@@ -71,8 +72,8 @@ public class UserService {
         return followRepository.findFollowingOf(userId, PageRequest.of(page, size));
     }
 
-    public ProfileDto getProfile(UUID id) {
-        return profileRepository.findById(id).map(profileMapper::toDto)
-                .orElseThrow(() -> new IllegalStateException("Profile not found"));
+    public UserProfileDto getProfile(UUID id) {
+        return profileRepository.findProfileWithStat(id)
+                .orElseThrow(() -> new ProfileNotFoundException("Profile not found"));
     }
 }
