@@ -11,5 +11,6 @@ public class UserSecurityRules implements SecurityRules {
     @Override
     public void configure(AuthorizeHttpRequestsConfigurer<HttpSecurity>.AuthorizationManagerRequestMatcherRegistry registry) {
         registry.requestMatchers(HttpMethod.POST, "/api/v1/users").permitAll();
+        registry.requestMatchers(HttpMethod.GET, "/api/v1/users/validate-username").permitAll();
     }
 }

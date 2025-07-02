@@ -26,5 +26,11 @@ spring:
     accessTokenExpiration: 7200 # 2h
     refreshTokenExpiration: 604800 # 7d
 
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    path: /swagger-ui.html
+
 server:
   port: 8000

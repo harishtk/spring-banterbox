@@ -1,5 +1,7 @@
-package space.banterbox.feature.post.api;
+package space.banterbox.feature.post.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -16,6 +18,7 @@ import space.banterbox.feature.post.service.PostService;
 import java.util.Map;
 import java.util.UUID;
 
+@Tag(name = "Posts", description = "Endpoints for managing posts and interactions")
 @RequiredArgsConstructor
 @RestController
 @RequestMapping("/api/v1/posts")
@@ -24,6 +27,7 @@ public class PostController {
     private final PostService postService;
     private final PostFeedService postFeedService;
 
+    @Operation(summary = "Create a new post", description = "Creates a new post with the given content")
     @PostMapping
     public ResponseEntity<Void> createPost(
             @AuthenticationPrincipal UUID userId,
@@ -34,6 +38,7 @@ public class PostController {
         return ResponseEntity.created(location).build();
     }
 
+    @Operation(summary = "Get global feed", description = "Retrieves paginated list of all posts")
     @GetMapping("/feed/global")
     public ResponseEntity<PagedResponse<PostDto>> getGlobalFeed(
             @RequestParam(name = "page", defaultValue = "0") int page,
@@ -43,6 +48,7 @@ public class PostController {
         return ResponseEntity.ok(getPagedResponse(pagedData));
     }
 
+    @Operation(summary = "Get private feed", description = "Retrieves paginated list of posts from followed users")
     @GetMapping("/feed/private")
     public ResponseEntity<PagedResponse<PostDto>> getPrivateFeed(
             @AuthenticationPrincipal UUID userId,
@@ -53,6 +59,7 @@ public class PostController {
         return ResponseEntity.ok(getPagedResponse(pagedData));
     }
 
+    @Operation(summary = "Like a post", description = "Adds like to the specified post")
     @PostMapping("/{postId}/like")
     public ResponseEntity<Void> likePost(
             @AuthenticationPrincipal UUID userId,
@@ -62,6 +69,7 @@ public class PostController {
         return ResponseEntity.noContent().build();
     }
 
+    @Operation(summary = "Unlike a post", description = "Removes like from the specified post")
     @DeleteMapping("/{postId}/like")
     public ResponseEntity<Void> unlikePost(
             @AuthenticationPrincipal UUID userId,
@@ -71,6 +79,7 @@ public class PostController {
         return ResponseEntity.noContent().build();
     }
 
+    @Operation(summary = "Get likes count", description = "Returns the total number of likes for the specified post")
     @GetMapping("/{postId}/likes/count")
     public ResponseEntity<Map<String, Long>> getPostLikesCount(@PathVariable("postId") UUID postId) {
         long count = postService.countLikes(postId);
