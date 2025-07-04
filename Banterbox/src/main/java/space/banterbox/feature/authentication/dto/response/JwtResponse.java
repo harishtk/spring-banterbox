@@ -2,9 +2,11 @@ package space.banterbox.feature.authentication.dto.response;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.Getter;
 
-@Data
+@Getter
 @AllArgsConstructor
 public class JwtResponse {
-    private String token;
+    private final String accessToken;
+    private final String refreshToken;
 }

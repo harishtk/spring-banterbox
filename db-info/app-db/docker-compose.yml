@@ -1,0 +1,35 @@
+  services:
+    banterbox-db:
+      image: postgres:16
+      container_name: banterbox-db
+      environment:
+        POSTGRES_DB: banterbox_db
+        POSTGRES_USER: postgres
+        POSTGRES_PASSWORD: postgres
+      ports:
+        - "5432:5432"
+#      deploy:
+#        resources:
+#          limits:
+#            cpus: '0.2'
+#            memory: 128M
+#          reservations:
+#            cpus: '0.05'
+#            memory: 64M
+      mem_limit: 128m      # Safe minimum for dev
+      cpus: 0.2            # Limit to 20% of 1 core
+      volumes:
+        - ${HOME}/db_volumes/banterbox-db:/var/lib/postgresql/data
+      networks:
+        internal:
+      healthcheck:
+        test: [ "CMD", "pg_isready", "-U", "postgres" ]
+        interval: 10s
+        timeout: 5s
+        retries: 5
+
+
+  networks:
+    internal:
+      external: true
+      name: internal

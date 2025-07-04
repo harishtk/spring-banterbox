@@ -53,7 +53,9 @@ public class AuthController {
 
         return ResponseEntity.ok()
                 .header("Set-Cookie", cookie.toString())
-                .body(new JwtResponse(loginResult.getAccessToken().toString()));
+                .body(new JwtResponse(
+                        loginResult.getAccessToken().toString(),
+                        loginResult.getRefreshToken().toString()));
     }
 
     @Operation(summary = "Create new user", description = "Create a new user account")
@@ -77,7 +79,7 @@ public class AuthController {
     @GetMapping("/refresh")
     public ResponseEntity<JwtResponse> refresh(@CookieValue("refreshToken") String refreshToken) {
         var accessToken = authService.refreshAccessToken(refreshToken);
-        return ResponseEntity.ok(new JwtResponse(accessToken.toString()));
+        return ResponseEntity.ok(new JwtResponse(accessToken.toString(), refreshToken));
     }
 
     @Operation(summary = "Get current user", description = "Get details of currently authenticated user")

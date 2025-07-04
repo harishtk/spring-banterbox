@@ -1,0 +1,43 @@
+services:
+  banterbox-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: banterbox-app
+    env_file:
+      - .env
+    environment:
+      JAVA_OPTS: >-
+        -Xms256m
+        -Xmx512m
+        -XX:MaxRAM=512M
+        -XX:+UseSerialGC
+        -XX:ReservedCodeCacheSize=32M
+        -XX:MaxMetaspaceSize=128M
+        -Xss512k
+      # Bare minimum footprint
+      #        -XX:ReservedCodeCacheSize=40M
+      #        -XX:MaxMetaspaceSize=60M
+      #        -Xlog:gc*=debug
+      #        -Xms34m
+      #        -Xmx40m
+      #        -Xss256k
+      #        -XX:MaxRAM=150M
+      #        -XX:+PrintFlagsFinal
+    ports:
+      - "8000:8000"
+    mem_limit: 600M      # Total memory hard limit
+    cpus: 1.0            # CPU hard limit
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8000/actuator/health | grep UP || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+networks:
+  internal:
+    external: true
+    name: internal

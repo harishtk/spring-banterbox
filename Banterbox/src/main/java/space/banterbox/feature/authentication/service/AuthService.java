@@ -69,15 +69,15 @@ public class AuthService {
         user.setUsername(request.getUsername());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setRole(Role.USER);
-        userRepository.save(user);
+        var savedUser = userRepository.save(user);
 
         Profile profile = new Profile();
-        profile.setId(user.getId());
+        profile.setUser(savedUser);
         profile.setDisplayName(request.getDisplayName());
         profile.setBio(request.getBio());
         profileRepository.save(profile);
 
-        return userRepository.save(user);
+        return savedUser;
     }
 
     public Jwt refreshAccessToken(String refreshToken) {
