@@ -1,9 +1,6 @@
 package space.banterbox.feature.authentication.service;
 
 import lombok.AllArgsConstructor;
-import org.apache.coyote.BadRequestException;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -12,17 +9,13 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import space.banterbox.feature.authentication.dto.request.LoginRequestDto;
 import space.banterbox.feature.authentication.dto.request.SignupRequestDto;
-import space.banterbox.feature.authentication.dto.response.LoginResponseDto;
+import space.banterbox.feature.authentication.dto.response.LoginResultDto;
 import space.banterbox.feature.authentication.model.Jwt;
 import space.banterbox.feature.user.exception.UsernameExistsException;
-import space.banterbox.feature.user.mapper.UserMapper;
-import space.banterbox.feature.user.model.Profile;
 import space.banterbox.feature.user.model.Role;
 import space.banterbox.feature.user.model.User;
-import space.banterbox.feature.user.repository.ProfileRepository;
 import space.banterbox.feature.user.repository.UserRepository;
 
-import java.util.Map;
 import java.util.UUID;
 
 @AllArgsConstructor
@@ -33,7 +26,6 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
 
     private final JwtService jwtService;
-    private final ProfileRepository profileRepository;
     private final PasswordEncoder passwordEncoder;
 
     public User getCurrentUser() {
@@ -44,7 +36,7 @@ public class AuthService {
         return userRepository.findById(userId).orElse(null);
     }
 
-    public LoginResponseDto login(LoginRequestDto request) {
+    public LoginResultDto login(LoginRequestDto request) {
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
                         request.getUsername(),
@@ -57,7 +49,7 @@ public class AuthService {
         final var accessToken = jwtService.generateAccessToken(user);
         final var refreshToken = jwtService.generateRefreshToken(user);
 
-        return new LoginResponseDto(accessToken, refreshToken);
+        return new LoginResultDto(accessToken, refreshToken, user);
     }
 
     public User signup(SignupRequestDto request) {
@@ -69,15 +61,9 @@ public class AuthService {
         user.setUsername(request.getUsername());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setRole(Role.USER);
-        var savedUser = userRepository.save(user);
-
-        Profile profile = new Profile();
-        profile.setUser(savedUser);
-        profile.setDisplayName(request.getDisplayName());
-        profile.setBio(request.getBio());
-        profileRepository.save(profile);
-
-        return savedUser;
+        user.setDisplayName(request.getDisplayName());
+        user.setBio(request.getBio());
+        return userRepository.save(user);
     }
 
     public Jwt refreshAccessToken(String refreshToken) {
@@ -88,5 +74,9 @@ public class AuthService {
 
         var user = userRepository.findById(jwt.getUserId()).orElseThrow();
         return jwtService.generateAccessToken(user);
+    }
+
+    public boolean existsByUsername(String username) {
+        return userRepository.existsUsersByUsername(username);
     }
 }

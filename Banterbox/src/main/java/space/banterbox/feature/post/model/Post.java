@@ -2,7 +2,6 @@ package space.banterbox.feature.post.model;
 
 import jakarta.persistence.*;
 import lombok.*;
-import space.banterbox.feature.user.model.Profile;
 import space.banterbox.feature.user.model.User;
 
 import java.time.Instant;

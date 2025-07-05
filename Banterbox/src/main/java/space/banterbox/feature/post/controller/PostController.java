@@ -10,6 +10,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.util.UriComponentsBuilder;
 import space.banterbox.core.response.PagedResponse;
+import space.banterbox.core.response.StandardResponse;
 import space.banterbox.feature.post.dto.PostDto;
 import space.banterbox.feature.post.dto.request.CreatePostRequest;
 import space.banterbox.feature.post.feed.service.PostFeedService;
@@ -40,23 +41,23 @@ public class PostController {
 
     @Operation(summary = "Get global feed", description = "Retrieves paginated list of all posts")
     @GetMapping("/feed/global")
-    public ResponseEntity<PagedResponse<PostDto>> getGlobalFeed(
+    public ResponseEntity<StandardResponse<PagedResponse<PostDto>>> getGlobalFeed(
             @RequestParam(name = "page", defaultValue = "0") int page,
             @RequestParam(name = "size", defaultValue = "20") int size
     ) {
         Page<PostDto> pagedData = postFeedService.getGlobalFeed(page, size);
-        return ResponseEntity.ok(getPagedResponse(pagedData));
+        return ResponseEntity.ok(StandardResponse.success(getPagedResponse(pagedData)));
     }
 
     @Operation(summary = "Get private feed", description = "Retrieves paginated list of posts from followed users")
     @GetMapping("/feed/private")
-    public ResponseEntity<PagedResponse<PostDto>> getPrivateFeed(
+    public ResponseEntity<StandardResponse<PagedResponse<PostDto>>> getPrivateFeed(
             @AuthenticationPrincipal UUID userId,
             @RequestParam(name = "page", defaultValue = "0") int page,
             @RequestParam(name = "size", defaultValue = "20") int size
     ) {
         Page<PostDto> pagedData     = postFeedService.getPrivateFeed(userId, page, size);
-        return ResponseEntity.ok(getPagedResponse(pagedData));
+        return ResponseEntity.ok(StandardResponse.success(getPagedResponse(pagedData)));
     }
 
     @Operation(summary = "Like a post", description = "Adds like to the specified post")
@@ -81,9 +82,9 @@ public class PostController {
 
     @Operation(summary = "Get likes count", description = "Returns the total number of likes for the specified post")
     @GetMapping("/{postId}/likes/count")
-    public ResponseEntity<Map<String, Long>> getPostLikesCount(@PathVariable("postId") UUID postId) {
+    public ResponseEntity<StandardResponse<Map<String, Long>>> getPostLikesCount(@PathVariable("postId") UUID postId) {
         long count = postService.countLikes(postId);
-        return ResponseEntity.ok(Map.of("likes", count));
+        return ResponseEntity.ok(StandardResponse.success(Map.of("likesCount", count)));
     }
 
     private <T> PagedResponse<T> getPagedResponse(Page<T> pagedData) {

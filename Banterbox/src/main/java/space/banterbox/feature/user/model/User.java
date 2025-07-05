@@ -3,7 +3,9 @@ package space.banterbox.feature.user.model;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.annotations.ColumnDefault;
 
+import java.time.Instant;
 import java.util.UUID;
 
 @Getter
@@ -25,5 +27,30 @@ public class User {
     @Column(name = "role")
     @Enumerated(EnumType.STRING)
     private Role role;
+
+    @Column(name = "display_name")
+    private String displayName;
+
+    @Column(name = "bio")
+    private String bio;
+
+    @Column(name = "profile_picture_id")
+    private String profilePictureId;
+
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private Instant createdAt;
+
+    @Column(name = "updated_at", nullable = false, updatable = false, insertable = false)
+    private Instant updatedAt;
+
+    @PrePersist
+    protected void onCreate() {
+        this.createdAt = Instant.now();
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        this.updatedAt = Instant.now();
+    }
 
 }

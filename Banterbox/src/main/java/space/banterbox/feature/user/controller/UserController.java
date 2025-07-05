@@ -3,19 +3,18 @@ package space.banterbox.feature.user.controller;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import space.banterbox.core.dto.ErrorDto;
 import space.banterbox.core.response.PagedResponse;
+import space.banterbox.core.response.StandardResponse;
 import space.banterbox.feature.authentication.service.AuthService;
 import space.banterbox.feature.user.dto.request.UpdatePasswordRequestDto;
 import space.banterbox.feature.user.dto.request.UpdateUserRequestDto;
 import space.banterbox.feature.user.dto.response.UserProfileDto;
 import space.banterbox.feature.user.dto.response.UserPreviewDto;
-import space.banterbox.feature.user.dto.response.UserResponseDto;
 import space.banterbox.feature.user.exception.ProfileNotFoundException;
 import space.banterbox.feature.user.mapper.UserMapper;
 import space.banterbox.feature.user.repository.UserRepository;
@@ -44,19 +43,28 @@ public class UserController {
             @ApiResponse(responseCode = "200", description = "Successfully retrieved users")
     })
     @GetMapping
-    public ResponseEntity<List<UserResponseDto>> getUsers(
-            @RequestParam(defaultValue = "name", required = false, name = "sort") String sortBy
+    public ResponseEntity<StandardResponse<PagedResponse<UserPreviewDto>>> getUsers(
+            @RequestParam(defaultValue = "name", required = false, name = "sort") String sortBy,
+            @RequestParam(name = "page", defaultValue = "0") int page,
+            @RequestParam(name = "size", defaultValue = "20") int size
     ) {
         final Set<String> supportedSortBy = Set.of("username");
         if (!supportedSortBy.contains(sortBy)) {
             sortBy = "username";
         }
 
-        return ResponseEntity.ok(
-                userRepository.findAll(Sort.by(sortBy))
-                        .stream().map(userMapper::toDto)
-                        .toList()
+        Page<UserPreviewDto> pagedData = userService.getAllUsers(sortBy, page, size);
+
+        var response = new PagedResponse<>(
+                pagedData.getContent(),
+                pagedData.getNumber(),
+                pagedData.getSize(),
+                pagedData.getTotalElements(),
+                pagedData.getTotalPages(),
+                pagedData.isLast()
         );
+
+        return ResponseEntity.ok(StandardResponse.success(response));
     }
 
     @Operation(summary = "Get user by ID", description = "Retrieve a user by their UUID")
@@ -65,10 +73,10 @@ public class UserController {
             @ApiResponse(responseCode = "404", description = "User not found")
     })
     @GetMapping("/{id}")
-    public ResponseEntity<UserResponseDto> getUserById(@PathVariable("id") UUID id) {
+    public ResponseEntity<StandardResponse<UserProfileDto>> getUserById(@PathVariable("id") UUID id) {
         var user = userRepository.findById(id);
         if (user.isPresent()) {
-            return ResponseEntity.ok(userMapper.toDto(user.orElseThrow()));
+            return ResponseEntity.ok(StandardResponse.success(userMapper.toDto(user.orElseThrow())));
         } else {
             return ResponseEntity.notFound().build();
         }
@@ -80,7 +88,7 @@ public class UserController {
             @ApiResponse(responseCode = "404", description = "User not found")
     })
     @PutMapping("/{id}")
-    public ResponseEntity<UserResponseDto> updateUser(
+    public ResponseEntity<StandardResponse<UserProfileDto>> updateUser(
             @PathVariable("id") UUID id,
             @Valid @RequestBody UpdateUserRequestDto request) {
 
@@ -90,7 +98,7 @@ public class UserController {
         }
 
         userMapper.updateUser(request, user.get());
-        return ResponseEntity.ok(userMapper.toDto(userRepository.save(user.orElseThrow())));
+        return ResponseEntity.ok(StandardResponse.success(userMapper.toDto(userRepository.save(user.orElseThrow()))));
     }
 
     @Operation(summary = "Delete user", description = "Delete an existing user")
@@ -136,25 +144,6 @@ public class UserController {
         return ResponseEntity.noContent().build();
     }
 
-
-    @Operation(summary = "Validate username", description = "Check if a username is available for registration")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Username validation successful"),
-            @ApiResponse(responseCode = "400", description = "Invalid username provided")
-    })
-    @GetMapping("/validate-username")
-    public ResponseEntity<Map<String, Boolean>> validateUsername(@RequestParam("username") String username) {
-        if (username == null || username.isBlank()) {
-            return ResponseEntity.badRequest().body(Map.of("valid", false));
-        }
-        
-        if (userRepository.existsUsersByUsername(username)) {
-            return ResponseEntity.ok(Map.of("valid", false));
-        }
-        
-        return ResponseEntity.ok(Map.of("valid", true));
-    }
-
     /* Profile */
     @Operation(summary = "Get current user profile", description = "Get the profile of the currently authenticated user")
     @ApiResponses(value = {
@@ -162,14 +151,14 @@ public class UserController {
             @ApiResponse(responseCode = "404", description = "Profile not found")
     })
     @GetMapping("/me")
-    public ResponseEntity<UserProfileDto> getMyProfile() {
+    public ResponseEntity<StandardResponse<UserProfileDto>> getMyProfile() {
         var user = authService.getCurrentUser();
 
         if (user == null) {
             return ResponseEntity.notFound().build();
         }
 
-        return ResponseEntity.ok(userService.getProfile(user.getId()));
+        return ResponseEntity.ok(StandardResponse.success(userService.getProfile(user.getId())));
     }
     /* END - Profile */
 
@@ -213,7 +202,7 @@ public class UserController {
             @ApiResponse(responseCode = "200", description = "Successfully retrieved followers list")
     })
     @GetMapping("/followers")
-    public ResponseEntity<PagedResponse<UserPreviewDto>> getFollowers(
+    public ResponseEntity<StandardResponse<PagedResponse<UserPreviewDto>>> getFollowers(
             @AuthenticationPrincipal UUID userId,
             @RequestParam(name = "page", defaultValue = "0") int page,
             @RequestParam(name = "size", defaultValue = "20") int size) {
@@ -229,7 +218,7 @@ public class UserController {
                 pagedData.isLast()
         );
 
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(StandardResponse.success(response));
     }
 
     @Operation(summary = "Get following", description = "Get a list of users that the current user follows")
@@ -237,7 +226,7 @@ public class UserController {
             @ApiResponse(responseCode = "200", description = "Successfully retrieved following list")
     })
     @GetMapping("/following")
-    public ResponseEntity<PagedResponse<UserPreviewDto>> getFollowing(
+    public ResponseEntity<StandardResponse<PagedResponse<UserPreviewDto>>> getFollowing(
             @AuthenticationPrincipal UUID userId,
             @RequestParam(name = "page", defaultValue = "0") int page,
             @RequestParam(name = "size", defaultValue = "20") int size) {
@@ -252,7 +241,7 @@ public class UserController {
                 pagedData.isLast()
         );
 
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(StandardResponse.success(response));
     }
     /* END - User follows/followers */
 

@@ -3,15 +3,15 @@ package space.banterbox.feature.user.service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import space.banterbox.feature.user.dto.response.UserProfileDto;
 import space.banterbox.feature.user.dto.response.UserPreviewDto;
 import space.banterbox.feature.user.exception.ProfileNotFoundException;
-import space.banterbox.feature.user.mapper.ProfileMapper;
+import space.banterbox.feature.user.mapper.UserMapper;
 import space.banterbox.feature.user.model.UsersFollower;
 import space.banterbox.feature.user.model.UsersFollowerId;
 import space.banterbox.feature.user.repository.FollowRepository;
-import space.banterbox.feature.user.repository.ProfileRepository;
 import space.banterbox.feature.user.repository.UserRepository;
 
 import java.util.UUID;
@@ -22,8 +22,7 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final FollowRepository followRepository;
-    private final ProfileRepository profileRepository;
-    private final ProfileMapper profileMapper;
+    private final UserMapper userMapper;
 
     public void follow(UUID currentUserId, UUID targetUserId) {
         var id = UsersFollowerId.builder()
@@ -73,7 +72,11 @@ public class UserService {
     }
 
     public UserProfileDto getProfile(UUID id) {
-        return profileRepository.findProfileWithStat(id)
+        return userRepository.findById(id).map(userMapper::toDto)
                 .orElseThrow(() -> new ProfileNotFoundException("Profile not found"));
+    }
+
+    public Page<UserPreviewDto> getAllUsers(String sortBy, int page, int size) {
+        return userRepository.getAllUsersWithPreview(PageRequest.of(page, size, Sort.by(sortBy)));
     }
 }

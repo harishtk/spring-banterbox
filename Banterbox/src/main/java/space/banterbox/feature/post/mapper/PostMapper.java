@@ -9,5 +9,6 @@ import space.banterbox.feature.post.model.Post;
 public interface PostMapper {
 
     @Mapping(target = "authorId", source = "author.id")
+    @Mapping(target = "authorUsername", source = "author.username")
     PostDto toDto(Post post);
 }

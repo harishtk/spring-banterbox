@@ -21,12 +21,11 @@ public interface FollowRepository extends JpaRepository<UsersFollower, UsersFoll
         SELECT new space.banterbox.feature.user.dto.response.UserPreviewDto(
             u.id,
             u.username,
-            p.displayName,
-            p.profilePictureId
+            u.displayName,
+            u.profilePictureId
         )
         FROM UsersFollower uf
         JOIN User u ON uf.id.followerId = u.id
-        JOIN Profile p ON u.id = p.id
         WHERE uf.id.followingId = :userId
     """, countQuery = "SELECT COUNT(uf) FROM UsersFollower uf WHERE uf.id.followingId = :userId")
     Page<UserPreviewDto> findFollowersOf(@Param("userId") UUID userId, Pageable pageable);
@@ -35,12 +34,11 @@ public interface FollowRepository extends JpaRepository<UsersFollower, UsersFoll
         SELECT new space.banterbox.feature.user.dto.response.UserPreviewDto(
             u.id,
             u.username,
-            p.displayName,
-            p.profilePictureId
+            u.displayName,
+            u.profilePictureId
         )
         FROM UsersFollower uf
         JOIN User u ON uf.id.followingId = u.id
-        JOIN Profile p ON u.id = p.id
         WHERE uf.id.followerId = :userId
     """, countQuery = "SELECT COUNT(uf) FROM UsersFollower uf WHERE uf.id.followerId = :userId")
     Page<UserPreviewDto> findFollowingOf(@Param("userId") UUID userId, Pageable pageable);
