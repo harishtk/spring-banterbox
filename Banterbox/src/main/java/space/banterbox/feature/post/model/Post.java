@@ -20,7 +20,7 @@ public class Post {
     @Column(name = "id")
     private UUID id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "author_id")
     private User author;
 

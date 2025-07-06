@@ -1,12 +1,7 @@
 package space.banterbox.feature.user.dto.request;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
-import space.banterbox.feature.user.model.Role;
 
 @Data
 public class UpdateUserRequestDto {

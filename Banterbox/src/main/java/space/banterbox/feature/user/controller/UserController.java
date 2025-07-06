@@ -8,9 +8,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import space.banterbox.core.dto.ErrorDto;
-import space.banterbox.core.response.PagedResponse;
 import space.banterbox.core.response.StandardResponse;
 import space.banterbox.feature.authentication.service.AuthService;
+import space.banterbox.feature.user.dto.PagedUserPreviewDto;
+import space.banterbox.feature.user.dto.PagedUserProfileDto;
 import space.banterbox.feature.user.dto.request.UpdatePasswordRequestDto;
 import space.banterbox.feature.user.dto.request.UpdateUserRequestDto;
 import space.banterbox.feature.user.dto.response.UserProfileDto;
@@ -44,7 +45,7 @@ public class UserController {
             @ApiResponse(responseCode = "200", description = "Successfully retrieved users")
     })
     @GetMapping
-    public ResponseEntity<StandardResponse<PagedResponse<UserPreviewDto>>> getUsers(
+    public ResponseEntity<StandardResponse<PagedUserPreviewDto>> getUsers(
             @RequestParam(defaultValue = "name", required = false, name = "sort") String sortBy,
             @RequestParam(name = "page", defaultValue = "0") int page,
             @RequestParam(name = "size", defaultValue = "20") int size
@@ -55,17 +56,7 @@ public class UserController {
         }
 
         Page<UserPreviewDto> pagedData = userService.getAllUsers(sortBy, page, size);
-
-        var response = new PagedResponse<>(
-                pagedData.getContent(),
-                pagedData.getNumber(),
-                pagedData.getSize(),
-                pagedData.getTotalElements(),
-                pagedData.getTotalPages(),
-                pagedData.isLast()
-        );
-
-        return ResponseEntity.ok(StandardResponse.success(response));
+        return ResponseEntity.ok(StandardResponse.success(getPagedUserPreviewResponse(pagedData)));
     }
 
     @Operation(summary = "Update user", description = "Update an existing user's information")
@@ -209,23 +200,13 @@ public class UserController {
             @ApiResponse(responseCode = "200", description = "Successfully retrieved followers list")
     })
     @GetMapping("/followers")
-    public ResponseEntity<StandardResponse<PagedResponse<UserPreviewDto>>> getFollowers(
+    public ResponseEntity<StandardResponse<PagedUserPreviewDto>> getFollowers(
             @AuthenticationPrincipal UUID userId,
             @RequestParam(name = "page", defaultValue = "0") int page,
             @RequestParam(name = "size", defaultValue = "20") int size) {
 
         Page<UserPreviewDto> pagedData = userService.getFollowers(userId, page, size);
-
-        var response = new PagedResponse<>(
-                pagedData.getContent(),
-                pagedData.getNumber(),
-                pagedData.getSize(),
-                pagedData.getTotalElements(),
-                pagedData.getTotalPages(),
-                pagedData.isLast()
-        );
-
-        return ResponseEntity.ok(StandardResponse.success(response));
+        return ResponseEntity.ok(StandardResponse.success(getPagedUserPreviewResponse(pagedData)));
     }
 
     @Operation(summary = "Get following", description = "Get a list of users that the current user follows")
@@ -233,22 +214,12 @@ public class UserController {
             @ApiResponse(responseCode = "200", description = "Successfully retrieved following list")
     })
     @GetMapping("/following")
-    public ResponseEntity<StandardResponse<PagedResponse<UserPreviewDto>>> getFollowing(
+    public ResponseEntity<StandardResponse<PagedUserPreviewDto>> getFollowing(
             @AuthenticationPrincipal UUID userId,
             @RequestParam(name = "page", defaultValue = "0") int page,
             @RequestParam(name = "size", defaultValue = "20") int size) {
         Page<UserPreviewDto> pagedData = userService.getFollowing(userId, page, size);
-
-        var response = new PagedResponse<>(
-                pagedData.getContent(),
-                pagedData.getNumber(),
-                pagedData.getSize(),
-                pagedData.getTotalElements(),
-                pagedData.getTotalPages(),
-                pagedData.isLast()
-        );
-
-        return ResponseEntity.ok(StandardResponse.success(response));
+        return ResponseEntity.ok(StandardResponse.success(getPagedUserPreviewResponse(pagedData)));
     }
     /* END - User follows/followers */
 
@@ -263,6 +234,28 @@ public class UserController {
     public ResponseEntity<StandardResponse<ErrorDto>> handleUserNotFoundException(UserNotFoundException exception) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
                 StandardResponse.of(HttpStatus.NOT_FOUND.value(), "Not found", new ErrorDto(exception.getMessage()))
+        );
+    }
+
+    private PagedUserProfileDto getPagedUserProfileResponse(Page<UserProfileDto> pagedData) {
+        return new PagedUserProfileDto(
+                pagedData.getContent(),
+                pagedData.getNumber(),
+                pagedData.getSize(),
+                pagedData.getTotalElements(),
+                pagedData.getTotalPages(),
+                pagedData.isLast()
+        );
+    }
+
+    private PagedUserPreviewDto getPagedUserPreviewResponse(Page<UserPreviewDto> pagedData) {
+        return new PagedUserPreviewDto(
+                pagedData.getContent(),
+                pagedData.getNumber(),
+                pagedData.getSize(),
+                pagedData.getTotalElements(),
+                pagedData.getTotalPages(),
+                pagedData.isLast()
         );
     }
 }

@@ -4,11 +4,18 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
+import space.banterbox.feature.post.dto.AuthorDto;
 import space.banterbox.feature.post.dto.PostDto;
+import space.banterbox.feature.post.dto.PostFeedDto;
+import space.banterbox.feature.post.dto.PostWithAuthorDto;
+import space.banterbox.feature.post.exception.PostLikeUnlikeException;
+import space.banterbox.feature.post.exception.PostNotFoundException;
+import space.banterbox.feature.post.mapper.AuthorMapper;
 import space.banterbox.feature.post.mapper.PostMapper;
 import space.banterbox.feature.post.model.Post;
 import space.banterbox.feature.post.model.PostLike;
 import space.banterbox.feature.post.model.PostLikeId;
+import space.banterbox.feature.post.projection.PostWithLikes;
 import space.banterbox.feature.post.repository.PostLikeRepository;
 import space.banterbox.feature.post.repository.PostRepository;
 import space.banterbox.feature.user.model.User;
@@ -25,8 +32,9 @@ public class PostService {
     private final FollowRepository followRepository;
     private final PostMapper postMapper;
     private final PostLikeRepository postLikeRepository;
+    private final AuthorMapper authorMapper;
 
-    public PostDto createPost(UUID userId, String content) {
+    public PostWithAuthorDto createPost(UUID userId, String content) {
         Post post = new Post();
         User author = new User();
         author.setId(userId);
@@ -35,32 +43,56 @@ public class PostService {
         post.setContent(content);
 
         var savedPost = postRepository.save(post);
-        return postMapper.toDto(savedPost);
+        return getPostById(savedPost.getId(), userId);
     }
 
-    public Page<PostDto> getPostsByAuthor(UUID userId, int page, int size) {
-        return postRepository.findPostsByFollowedAuthors(List.of(userId), PageRequest.of(page, size));
+    public PostWithAuthorDto getPostById(UUID postId, UUID currentUserId) {
+        var postWithLikes = postRepository.findPostWithLikes(postId, currentUserId)
+                .orElseThrow(() -> new PostNotFoundException("Post not found"));
+
+        PostDto post = postMapper.toDto(postWithLikes);
+        List<AuthorDto> users = List.of(authorMapper.toDto(postWithLikes.getAuthor()));
+        return new PostWithAuthorDto(post, users);
+    }
+
+    public PostFeedDto getPostsByAuthor(UUID authorId, UUID viewerUserId, int page, int size) {
+        Page<PostWithLikes> pagedData = postRepository.findPostsByFollowedAuthors(List.of(authorId), viewerUserId, PageRequest.of(page, size));
+        return getPostFeedDto(pagedData);
     }
 
     /* Feeds */
-    public Page<PostDto> getGlobalFeed(int page, int size) {
-        return postRepository.findAllPosts(PageRequest.of(page, size));
+    public PostFeedDto getGlobalFeed(UUID userId, int page, int size) {
+        Page<PostWithLikes> pagedData = postRepository.findAllPosts(userId, PageRequest.of(page, size));
+        return getPostFeedDto(pagedData);
     }
 
-    public Page<PostDto> getPrivateFeed(UUID userId, int page, int size) {
+    private PostFeedDto getPostFeedDto(Page<PostWithLikes> pagedData) {
+        List<PostDto> posts = pagedData.getContent().stream().map(postMapper::toDto).toList();
+        List<AuthorDto> users = pagedData.getContent().stream().map(PostWithLikes::getAuthor).distinct().map(authorMapper::toDto).toList();
+
+        return new PostFeedDto(
+                posts,
+                users,
+                PostFeedDto.PageMetadata.from(pagedData)
+        );
+    }
+
+    public PostFeedDto getPrivateFeed(UUID userId, int page, int size) {
         List<UUID> followingIds = followRepository.findAllByFollowerId(userId)
                 .stream()
                 .map(f -> f.getId().getFollowingId())
                 .toList();
-        return postRepository.findPostsByFollowedAuthors(followingIds, PageRequest.of(page, size));
+
+        Page<PostWithLikes> pagedData = postRepository.findPostsByFollowedAuthors(followingIds, userId, PageRequest.of(page, size));
+        return getPostFeedDto(pagedData);
     }
     /* END - Feeds */
 
     /* Post likes */
-    public void likePost(UUID postId, UUID userId) {
+    public PostWithAuthorDto likePost(UUID postId, UUID userId) {
         PostLikeId id = new PostLikeId(postId, userId);
         if (postLikeRepository.existsLike(id)) {
-            throw new IllegalStateException("Already liked");
+            throw new PostLikeUnlikeException("Already liked");
         }
 
         Post post = postRepository.getReferenceById(postId);
@@ -73,19 +105,17 @@ public class PostService {
         like.setPost(post);
 
         postLikeRepository.save(like);
+        // Returning an updated post
+        return getPostById(postId, userId);
     }
 
-    public void unlikePost(UUID postId, UUID userId) {
+    public PostWithAuthorDto unlikePost(UUID postId, UUID userId) {
         PostLikeId id = new PostLikeId(postId, userId);
         if (!postLikeRepository.existsLike(id)) {
-            throw new IllegalStateException("Not liked");
+            throw new PostLikeUnlikeException("Not liked");
         }
 
         postLikeRepository.deleteById(id);
+        return getPostById(postId, userId);
     }
-
-    public long countLikes(UUID postId) {
-        return postLikeRepository.countLikesByPostId(postId);
-    }
-
     /* END - Post likes */}

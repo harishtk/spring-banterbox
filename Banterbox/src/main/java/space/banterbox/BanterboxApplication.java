@@ -1,7 +1,5 @@
 package space.banterbox;
 
-import me.paulschwarz.springdotenv.DotenvConfig;
-import me.paulschwarz.springdotenv.spring.DotenvApplicationInitializer;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 

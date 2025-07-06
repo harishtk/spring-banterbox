@@ -1,23 +1,18 @@
 package space.banterbox.feature.user.dto.response;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-
 import java.time.Instant;
 import java.util.UUID;
 
-@Getter
-@AllArgsConstructor
-public class UserProfileDto {
-    private UUID id;
-    private String username;
-    private String displayName;
-    private String bio;
-    private String profilePictureId;
-    private Instant createdAt;
-    private long followersCount;
-    private long followingCount;
-    private boolean isFollowing;
-    private boolean isSelf;
-}
+public record UserProfileDto(
+     UUID id,
+     String username,
+     String displayName,
+     String bio,
+     String profilePictureId,
+     Instant createdAt,
+     long followersCount,
+     long followingCount,
+     boolean isFollowing,
+     boolean isSelf
+) {}
 

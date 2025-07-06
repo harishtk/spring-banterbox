@@ -1,22 +1,24 @@
 package space.banterbox.feature.post.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.util.UriComponentsBuilder;
-import space.banterbox.core.response.PagedResponse;
+import space.banterbox.core.dto.ErrorDto;
 import space.banterbox.core.response.StandardResponse;
-import space.banterbox.feature.post.dto.PostDto;
+import space.banterbox.feature.post.dto.PostFeedDto;
+import space.banterbox.feature.post.dto.PostWithAuthorDto;
 import space.banterbox.feature.post.dto.request.CreatePostRequest;
-import space.banterbox.feature.post.feed.service.PostFeedService;
+import space.banterbox.feature.post.exception.PostLikeUnlikeException;
+import space.banterbox.feature.post.exception.PostNotFoundException;
 import space.banterbox.feature.post.service.PostService;
 
-import java.util.Map;
 import java.util.UUID;
 
 @Tag(name = "Posts", description = "Endpoints for managing posts and interactions")
@@ -26,76 +28,149 @@ import java.util.UUID;
 public class PostController {
 
     private final PostService postService;
-    private final PostFeedService postFeedService;
 
-    @Operation(summary = "Create a new post", description = "Creates a new post with the given content")
+    @Operation(
+            summary = "Create a new post",
+            description = "Creates a new post with the given content. Returns the created post with author information.",
+            responses = {
+                    @ApiResponse(responseCode = "201", description = "Post successfully created"),
+                    @ApiResponse(responseCode = "400", description = "Invalid request body")
+            }
+    )
     @PostMapping
-    public ResponseEntity<Void> createPost(
+    public ResponseEntity<StandardResponse<PostWithAuthorDto>> createPost(
             @AuthenticationPrincipal UUID userId,
             @Valid @RequestBody CreatePostRequest request,
             UriComponentsBuilder uriBuilder) {
         var savedPost = postService.createPost(userId, request.getContent());
-        var location = uriBuilder.path("/posts/{id}").buildAndExpand(savedPost.getId()).toUri();
-        return ResponseEntity.created(location).build();
+        var location = uriBuilder.path("/posts/{id}").buildAndExpand(savedPost.post().id()).toUri();
+        return ResponseEntity.created(location).body(StandardResponse.success(HttpStatus.CREATED, savedPost));
     }
 
-    @Operation(summary = "Get global feed", description = "Retrieves paginated list of all posts")
+    @Operation(
+            summary = "Get post by ID",
+            description = "Retrieves a post by its ID with author information and interaction status for the current user",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Post found and returned"),
+                    @ApiResponse(responseCode = "404", description = "Post not found")
+            }
+    )
+    @GetMapping("/{postId}")
+    public ResponseEntity<StandardResponse<PostWithAuthorDto>> getPostById(
+            @AuthenticationPrincipal UUID viewerUserId,
+            @PathVariable("postId") UUID postId) {
+        return ResponseEntity.ok(StandardResponse.success(postService.getPostById(postId, viewerUserId)));
+    }
+
+    @Operation(
+            summary = "Get global feed",
+            description = "Retrieves paginated list of all posts sorted by creation date. Includes interaction status for the current user",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Posts retrieved successfully")
+            }
+    )
     @GetMapping("/feed/global")
-    public ResponseEntity<StandardResponse<PagedResponse<PostDto>>> getGlobalFeed(
+    public ResponseEntity<StandardResponse<PostFeedDto>> getGlobalFeed(
+            @AuthenticationPrincipal UUID viewerUserId,
             @RequestParam(name = "page", defaultValue = "0") int page,
             @RequestParam(name = "size", defaultValue = "20") int size
     ) {
-        Page<PostDto> pagedData = postFeedService.getGlobalFeed(page, size);
-        return ResponseEntity.ok(StandardResponse.success(getPagedResponse(pagedData)));
+        return ResponseEntity.ok(StandardResponse.success(postService.getGlobalFeed(viewerUserId, page, size)));
     }
 
-    @Operation(summary = "Get private feed", description = "Retrieves paginated list of posts from followed users")
+    @Operation(
+            summary = "Get private feed",
+            description = "Retrieves paginated list of posts from users that the current user follows, sorted by creation date",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Posts retrieved successfully")
+            }
+    )
+
     @GetMapping("/feed/private")
-    public ResponseEntity<StandardResponse<PagedResponse<PostDto>>> getPrivateFeed(
+    public ResponseEntity<StandardResponse<PostFeedDto>> getPrivateFeed(
             @AuthenticationPrincipal UUID userId,
             @RequestParam(name = "page", defaultValue = "0") int page,
             @RequestParam(name = "size", defaultValue = "20") int size
     ) {
-        Page<PostDto> pagedData     = postFeedService.getPrivateFeed(userId, page, size);
-        return ResponseEntity.ok(StandardResponse.success(getPagedResponse(pagedData)));
+        return ResponseEntity.ok(StandardResponse.success(postService.getPrivateFeed(userId, page, size)));
     }
 
-    @Operation(summary = "Like a post", description = "Adds like to the specified post")
+
+    @Operation(
+            summary = "Get posts by author",
+            description = "Retrieves paginated list of posts from a specific author. Includes interaction status for the current user",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Posts retrieved successfully"),
+                    @ApiResponse(responseCode = "404", description = "Author not found")
+            }
+    )
+    @GetMapping
+    public ResponseEntity<StandardResponse<PostFeedDto>> getPostsByQuery(
+            @AuthenticationPrincipal UUID viewerUserId,
+            @RequestParam(name = "authorId") UUID authorId,
+            @RequestParam(name = "page", defaultValue = "0") int page,
+            @RequestParam(name = "size", defaultValue = "20") int size
+    ) {
+        return ResponseEntity.ok(
+                StandardResponse.success(postService.getPostsByAuthor(authorId, viewerUserId, page, size)));    
+    }
+
+    @Operation(
+            summary = "Like a post",
+            description = "Adds like to the specified post. A user can only like a post once",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Post liked successfully"),
+                    @ApiResponse(responseCode = "404", description = "Post not found"),
+                    @ApiResponse(responseCode = "409", description = "Post already liked by user")
+            }
+    )
     @PostMapping("/{postId}/like")
-    public ResponseEntity<Void> likePost(
-            @AuthenticationPrincipal UUID userId,
+    public ResponseEntity<StandardResponse<PostWithAuthorDto>> likePost(
+            @AuthenticationPrincipal UUID currentUserId,
             @PathVariable("postId") UUID postId
     ) {
-        postService.likePost(userId, postId);
-        return ResponseEntity.noContent().build();
+        var postDto = postService.likePost(postId, currentUserId);
+        return ResponseEntity.ok(StandardResponse.success(postDto));
     }
 
-    @Operation(summary = "Unlike a post", description = "Removes like from the specified post")
+    @Operation(
+            summary = "Unlike a post",
+            description = "Removes user's like from the specified post",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Post unliked successfully"),
+                    @ApiResponse(responseCode = "404", description = "Post not found"),
+                    @ApiResponse(responseCode = "409", description = "Post was not liked by user")
+            }
+    )
     @DeleteMapping("/{postId}/like")
-    public ResponseEntity<Void> unlikePost(
-            @AuthenticationPrincipal UUID userId,
+    public ResponseEntity<StandardResponse<PostWithAuthorDto>> unlikePost(
+            @AuthenticationPrincipal UUID currentUserId,
             @PathVariable("postId") UUID postId
     ) {
-        postService.unlikePost(userId, postId);
-        return ResponseEntity.noContent().build();
+        var postDto = postService.unlikePost(postId, currentUserId);
+        return ResponseEntity.ok(StandardResponse.success(postDto));
     }
 
-    @Operation(summary = "Get likes count", description = "Returns the total number of likes for the specified post")
-    @GetMapping("/{postId}/likes/count")
-    public ResponseEntity<StandardResponse<Map<String, Long>>> getPostLikesCount(@PathVariable("postId") UUID postId) {
-        long count = postService.countLikes(postId);
-        return ResponseEntity.ok(StandardResponse.success(Map.of("likesCount", count)));
-    }
-
-    private <T> PagedResponse<T> getPagedResponse(Page<T> pagedData) {
-        return new PagedResponse<>(
-                pagedData.getContent(),
-                pagedData.getNumber(),
-                pagedData.getSize(),
-                pagedData.getTotalElements(),
-                pagedData.getTotalPages(),
-                pagedData.isLast()
+    @Operation(
+            summary = "Get likes count",
+            description = "Returns the total number of likes for the specified post",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Like count retrieved successfully"),
+                    @ApiResponse(responseCode = "404", description = "Post not found")
+            }
+    )
+    
+    @ExceptionHandler(PostNotFoundException.class)
+    public ResponseEntity<StandardResponse<ErrorDto>> handlePostNotFoundException(PostNotFoundException exception) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                StandardResponse.of(HttpStatus.NOT_FOUND.value(), "Not found", new ErrorDto(exception.getMessage()))
         );
     }
 
+    @ExceptionHandler(PostLikeUnlikeException.class)
+    public ResponseEntity<StandardResponse<ErrorDto>> handlePostLikeUnlikeException(PostLikeUnlikeException exception) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(
+                StandardResponse.of(HttpStatus.CONFLICT.value(), "Conflict", new ErrorDto(exception.getMessage()))
+        );
+    }
 }

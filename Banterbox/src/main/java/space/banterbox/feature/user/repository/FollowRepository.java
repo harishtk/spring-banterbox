@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import space.banterbox.feature.user.dto.response.UserPreviewDto;
+import space.banterbox.feature.user.model.User;
 import space.banterbox.feature.user.model.UsersFollower;
 import space.banterbox.feature.user.model.UsersFollowerId;
 
@@ -18,30 +19,20 @@ public interface FollowRepository extends JpaRepository<UsersFollower, UsersFoll
     List<UsersFollower> findAllByFollowerId(UUID userId);
 
     @Query(value = """
-        SELECT new space.banterbox.feature.user.dto.response.UserPreviewDto(
-            u.id,
-            u.username,
-            u.displayName,
-            u.profilePictureId
-        )
+        SELECT u
         FROM UsersFollower uf
         JOIN User u ON uf.id.followerId = u.id
         WHERE uf.id.followingId = :userId
     """, countQuery = "SELECT COUNT(uf) FROM UsersFollower uf WHERE uf.id.followingId = :userId")
-    Page<UserPreviewDto> findFollowersOf(@Param("userId") UUID userId, Pageable pageable);
+    Page<User> findFollowersOf(@Param("userId") UUID userId, Pageable pageable);
 
     @Query(value = """
-        SELECT new space.banterbox.feature.user.dto.response.UserPreviewDto(
-            u.id,
-            u.username,
-            u.displayName,
-            u.profilePictureId
-        )
+        SELECT u
         FROM UsersFollower uf
         JOIN User u ON uf.id.followingId = u.id
         WHERE uf.id.followerId = :userId
     """, countQuery = "SELECT COUNT(uf) FROM UsersFollower uf WHERE uf.id.followerId = :userId")
-    Page<UserPreviewDto> findFollowingOf(@Param("userId") UUID userId, Pageable pageable);
+    Page<User> findFollowingOf(@Param("userId") UUID userId, Pageable pageable);
 
     Long countUsersFollowersByFollowingId(UUID followingId);
     Long countUsersFollowingByFollowerId(UUID followerId);

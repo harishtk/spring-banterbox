@@ -79,15 +79,18 @@ public class UserService {
     }
 
     public Page<UserPreviewDto> getFollowers(UUID userId, int page, int size) {
-        return followRepository.findFollowersOf(userId, PageRequest.of(page, size));
+        return followRepository.findFollowersOf(userId, PageRequest.of(page, size))
+                .map(userMapper::toPreviewDto);
     }
 
     public Page<UserPreviewDto> getFollowing(UUID userId, int page, int size) {
-        return followRepository.findFollowingOf(userId, PageRequest.of(page, size));
+        return followRepository.findFollowingOf(userId, PageRequest.of(page, size))
+                .map(userMapper::toPreviewDto);
     }
 
     public Page<UserPreviewDto> getAllUsers(String sortBy, int page, int size) {
-        return userRepository.getAllUsersWithPreview(PageRequest.of(page, size, Sort.by(sortBy)));
+        Page<User> pagedData = userRepository.findAll(PageRequest.of(page, size, Sort.by(sortBy)));
+        return pagedData.map(userMapper::toPreviewDto);
     }
 
     public UserProfileDto getUserProfileByUsername(String username, UUID currentUserId) {
@@ -107,12 +110,12 @@ public class UserService {
         long following = followRepository.countUsersFollowingByFollowerId(targetUser.getId());
 
         return new UserProfileDto(
-                base.getId(),
-                base.getUsername(),
-                base.getDisplayName(),
-                base.getBio(),
-                base.getProfilePictureId(),
-                base.getCreatedAt(),
+                base.id(),
+                base.username(),
+                base.displayName(),
+                base.bio(),
+                base.profilePictureId(),
+                base.createdAt(),
                 followers,
                 following,
                 isFollowing,
