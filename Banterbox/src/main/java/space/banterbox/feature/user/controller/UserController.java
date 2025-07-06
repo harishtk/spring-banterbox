@@ -15,7 +15,8 @@ import space.banterbox.feature.user.dto.request.UpdatePasswordRequestDto;
 import space.banterbox.feature.user.dto.request.UpdateUserRequestDto;
 import space.banterbox.feature.user.dto.response.UserProfileDto;
 import space.banterbox.feature.user.dto.response.UserPreviewDto;
-import space.banterbox.feature.user.exception.ProfileNotFoundException;
+import space.banterbox.feature.user.exception.UserFollowException;
+import space.banterbox.feature.user.exception.UserNotFoundException;
 import space.banterbox.feature.user.mapper.UserMapper;
 import space.banterbox.feature.user.repository.UserRepository;
 import space.banterbox.feature.user.service.UserService;
@@ -65,21 +66,6 @@ public class UserController {
         );
 
         return ResponseEntity.ok(StandardResponse.success(response));
-    }
-
-    @Operation(summary = "Get user by ID", description = "Retrieve a user by their UUID")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Successfully retrieved user"),
-            @ApiResponse(responseCode = "404", description = "User not found")
-    })
-    @GetMapping("/{id}")
-    public ResponseEntity<StandardResponse<UserProfileDto>> getUserById(@PathVariable("id") UUID id) {
-        var user = userRepository.findById(id);
-        if (user.isPresent()) {
-            return ResponseEntity.ok(StandardResponse.success(userMapper.toDto(user.orElseThrow())));
-        } else {
-            return ResponseEntity.notFound().build();
-        }
     }
 
     @Operation(summary = "Update user", description = "Update an existing user's information")
@@ -153,12 +139,33 @@ public class UserController {
     @GetMapping("/me")
     public ResponseEntity<StandardResponse<UserProfileDto>> getMyProfile() {
         var user = authService.getCurrentUser();
+        return ResponseEntity.ok(StandardResponse.success(userService.enrichUserProfile(user, user)));
+    }
 
-        if (user == null) {
-            return ResponseEntity.notFound().build();
-        }
+    @Operation(summary = "Get user by @username", description = "Retrieve a user by their username")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Successfully retrieved user"),
+            @ApiResponse(responseCode = "404", description = "User not found")
+    })
+    @GetMapping("/@{username}")
+    public ResponseEntity<StandardResponse<UserProfileDto>> getUserById(
+            @AuthenticationPrincipal UUID viewerUserId,
+            @PathVariable("username") String username
+    ) {
+        return ResponseEntity.ok(StandardResponse.success(userService.getUserProfileByUsername(username, viewerUserId)));
+    }
 
-        return ResponseEntity.ok(StandardResponse.success(userService.getProfile(user.getId())));
+    @Operation(summary = "Get user by ID", description = "Retrieve a user by their UUID")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Successfully retrieved user"),
+            @ApiResponse(responseCode = "404", description = "User not found")
+    })
+    @GetMapping("/{userId}")
+    public ResponseEntity<StandardResponse<UserProfileDto>> getUserById(
+            @AuthenticationPrincipal UUID viewerUserId,
+            @PathVariable("userId") UUID userId
+    ) {
+        return ResponseEntity.ok(StandardResponse.success(userService.enrichUserProfile(userId, viewerUserId)));
     }
     /* END - Profile */
 
@@ -168,16 +175,16 @@ public class UserController {
             @ApiResponse(responseCode = "204", description = "Successfully followed user"),
             @ApiResponse(responseCode = "403", description = "Cannot follow yourself")
     })
-    @PostMapping("/{id}/follow")
-    public ResponseEntity<Void> followUser(@PathVariable("id") UUID userId) {
-        var currentUser = authService.getCurrentUser();
-
-        if (Objects.equals(userId, currentUser.getId())) {
+    @PostMapping("/{userId}/follow")
+    public ResponseEntity<StandardResponse<UserProfileDto>> followUser(
+            @AuthenticationPrincipal UUID currentUserId,
+            @PathVariable("userId") UUID userId
+    ) {
+        if (Objects.equals(userId, currentUserId)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
 
-        userService.follow(currentUser.getId(), userId);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(StandardResponse.success(userService.follow(currentUserId, userId)));
     }
 
     @Operation(summary = "Unfollow user", description = "Unfollow a previously followed user")
@@ -185,16 +192,16 @@ public class UserController {
             @ApiResponse(responseCode = "204", description = "Successfully unfollowed user"),
             @ApiResponse(responseCode = "403", description = "Cannot unfollow yourself")
     })
-    @PostMapping("/{id}/unfollow")
-    public ResponseEntity<Void> unfollowUser(@PathVariable("id") UUID userId) {
-        var currentUser = authService.getCurrentUser();
-
-        if (Objects.equals(userId, currentUser.getId())) {
+    @PostMapping("/{userId}/unfollow")
+    public ResponseEntity<StandardResponse<UserProfileDto>> unfollowUser(
+            @AuthenticationPrincipal UUID currentUserId,
+            @PathVariable("userId") UUID userId
+    ) {
+        if (Objects.equals(userId, currentUserId)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
 
-        userService.unfollow(currentUser.getId(), userId);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(StandardResponse.success(userService.unfollow(currentUserId, userId)));
     }
 
     @Operation(summary = "Get followers", description = "Get a list of users who follow the current user")
@@ -245,10 +252,17 @@ public class UserController {
     }
     /* END - User follows/followers */
 
-    @ExceptionHandler(ProfileNotFoundException.class)
-    public ResponseEntity<ErrorDto> handleProfileNotFoundException(ProfileNotFoundException exception) {
+    @ExceptionHandler(UserFollowException.class)
+    public ResponseEntity<StandardResponse<ErrorDto>> handleUserFollowException(UserFollowException exception) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(
+                StandardResponse.of(HttpStatus.CONFLICT.value(), "Conflict", new ErrorDto(exception.getMessage()))
+        );
+    }
+
+    @ExceptionHandler(UserNotFoundException.class)
+    public ResponseEntity<StandardResponse<ErrorDto>> handleUserNotFoundException(UserNotFoundException exception) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
-                new ErrorDto(exception.getMessage())
+                StandardResponse.of(HttpStatus.NOT_FOUND.value(), "Not found", new ErrorDto(exception.getMessage()))
         );
     }
 }

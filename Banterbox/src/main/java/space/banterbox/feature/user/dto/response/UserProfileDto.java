@@ -15,5 +15,9 @@ public class UserProfileDto {
     private String bio;
     private String profilePictureId;
     private Instant createdAt;
+    private long followersCount;
+    private long followingCount;
+    private boolean isFollowing;
+    private boolean isSelf;
 }
 

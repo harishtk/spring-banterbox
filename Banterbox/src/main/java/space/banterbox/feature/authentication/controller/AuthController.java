@@ -57,7 +57,8 @@ public class AuthController {
                 .maxAge(jwtConfig.getRefreshTokenExpiration())
                 .build();
 
-        var loginUser = userService.getProfile(loginResult.getUser().getId());
+        var userId = loginResult.getUser().getId();
+        var loginUser = userService.enrichUserProfile(userId, userId);
 
         return ResponseEntity.ok()
                 .header("Set-Cookie", cookie.toString())
@@ -77,7 +78,9 @@ public class AuthController {
             @Valid @RequestBody SignupRequestDto request) {
 
         var savedUser = authService.signup(request);
-        return ResponseEntity.status(HttpStatus.CREATED).build();
+        return ResponseEntity.status(HttpStatus.CREATED).body(
+                StandardResponse.success(HttpStatus.CREATED, userMapper.toDto(savedUser))
+        );
     }
 
     

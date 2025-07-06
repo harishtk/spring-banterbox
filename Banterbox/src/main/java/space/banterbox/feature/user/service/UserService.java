@@ -5,10 +5,12 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
-import space.banterbox.feature.user.dto.response.UserProfileDto;
 import space.banterbox.feature.user.dto.response.UserPreviewDto;
-import space.banterbox.feature.user.exception.ProfileNotFoundException;
+import space.banterbox.feature.user.dto.response.UserProfileDto;
+import space.banterbox.feature.user.exception.UserFollowException;
+import space.banterbox.feature.user.exception.UserNotFoundException;
 import space.banterbox.feature.user.mapper.UserMapper;
+import space.banterbox.feature.user.model.User;
 import space.banterbox.feature.user.model.UsersFollower;
 import space.banterbox.feature.user.model.UsersFollowerId;
 import space.banterbox.feature.user.repository.FollowRepository;
@@ -24,7 +26,7 @@ public class UserService {
     private final FollowRepository followRepository;
     private final UserMapper userMapper;
 
-    public void follow(UUID currentUserId, UUID targetUserId) {
+    public UserProfileDto follow(UUID currentUserId, UUID targetUserId) {
         var id = UsersFollowerId.builder()
                 .followerId(currentUserId)
                 .followingId(targetUserId)
@@ -32,16 +34,24 @@ public class UserService {
 
         boolean alreadyFollowing = followRepository.existsById(id);
         if (alreadyFollowing) {
-            throw new IllegalStateException("Already following");
+            throw new UserFollowException("Already following");
         }
+
+        var follower = userRepository.findById(currentUserId).orElseThrow(() -> new UserNotFoundException("follower not found"));
+        var following = userRepository.findById(targetUserId).orElseThrow(() -> new UserNotFoundException("following not found"));
 
         UsersFollower relationship = UsersFollower.builder()
                 .id(id)
+                .follower(follower)
+                .following(following)
                 .build();
         followRepository.save(relationship);
+
+        // Return the updated target user profile
+        return enrichUserProfile(following, follower);
     }
 
-    public void unfollow(UUID currentUserId, UUID targetUserId) {
+    public UserProfileDto unfollow(UUID currentUserId, UUID targetUserId) {
         var id = UsersFollowerId.builder()
                 .followerId(currentUserId)
                 .followingId(targetUserId)
@@ -49,10 +59,15 @@ public class UserService {
 
         boolean alreadyFollowing = followRepository.existsById(id);
         if (!alreadyFollowing) {
-            throw new IllegalStateException("Not following");
+            throw new UserFollowException("Not following");
         }
 
         followRepository.deleteById(id);
+
+        // Return the updated target user profile
+        var follower = userRepository.findById(currentUserId).orElseThrow(() -> new UserNotFoundException("follower not found"));
+        var following = userRepository.findById(targetUserId).orElseThrow(() -> new UserNotFoundException("following not found"));
+        return enrichUserProfile(following, follower);
     }
 
     public boolean isFollowing(UUID currentUserId, UUID targetUserId) {
@@ -71,12 +86,48 @@ public class UserService {
         return followRepository.findFollowingOf(userId, PageRequest.of(page, size));
     }
 
-    public UserProfileDto getProfile(UUID id) {
-        return userRepository.findById(id).map(userMapper::toDto)
-                .orElseThrow(() -> new ProfileNotFoundException("Profile not found"));
-    }
-
     public Page<UserPreviewDto> getAllUsers(String sortBy, int page, int size) {
         return userRepository.getAllUsersWithPreview(PageRequest.of(page, size, Sort.by(sortBy)));
+    }
+
+    public UserProfileDto getUserProfileByUsername(String username, UUID currentUserId) {
+        User targetUser = userRepository.findUserByUsername(username).orElseThrow(() -> new UserNotFoundException("User not found"));
+        User currentUser = userRepository.findById(currentUserId).orElseThrow(() -> new UserNotFoundException("User not found"));
+        return enrichUserProfile(targetUser, currentUser);
+    }
+
+    public UserProfileDto enrichUserProfile(User targetUser, User currentUser) {
+        UserProfileDto base = userMapper.toDto(targetUser);
+
+        boolean isSelf = currentUser.getId().equals(targetUser.getId());
+        boolean isFollowing = !isSelf && followRepository.existsById(
+                new UsersFollowerId(currentUser.getId(), targetUser.getId())
+        );
+        long followers = followRepository.countUsersFollowersByFollowingId(targetUser.getId());
+        long following = followRepository.countUsersFollowingByFollowerId(targetUser.getId());
+
+        return new UserProfileDto(
+                base.getId(),
+                base.getUsername(),
+                base.getDisplayName(),
+                base.getBio(),
+                base.getProfilePictureId(),
+                base.getCreatedAt(),
+                followers,
+                following,
+                isFollowing,
+                isSelf
+        );
+    }
+
+    public UserProfileDto enrichUserProfile(UUID targetUserId, UUID currentUserId) {
+        if (targetUserId.equals(currentUserId)) {
+            User currentUser = userRepository.findById(currentUserId).orElseThrow(() -> new UserNotFoundException("User not found"));
+            return enrichUserProfile(currentUser, currentUser);
+        } else {
+            User targetUser = userRepository.findById(targetUserId).orElseThrow(() -> new UserNotFoundException("User not found"));
+            User currentUser = userRepository.findById(currentUserId).orElseThrow(() -> new UserNotFoundException("User not found"));
+            return enrichUserProfile(targetUser, currentUser);
+        }
     }
 }

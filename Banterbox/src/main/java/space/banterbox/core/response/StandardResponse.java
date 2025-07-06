@@ -13,6 +13,10 @@ public class StandardResponse<T> {
     private String message;
     private T data;
 
+    public static <T> StandardResponse<T> success(HttpStatus httpStatus, T data) {
+        return new StandardResponse<>(httpStatus.value(), "Success", data);
+    }
+
     public static <T> StandardResponse<T> success(T data) {
         return new StandardResponse<>(HttpStatus.OK.value(), "Success", data);
     }
