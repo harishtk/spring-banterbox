@@ -221,6 +221,38 @@ public class UserController {
         Page<UserPreviewDto> pagedData = userService.getFollowing(userId, page, size);
         return ResponseEntity.ok(StandardResponse.success(getPagedUserPreviewResponse(pagedData)));
     }
+
+    @Operation(summary = "Get followers of user", description = "Get a list of users who follow a given user")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Successfully retrieved followers list"),
+            @ApiResponse(responseCode = "404", description = "User not found")
+    })
+    @GetMapping("{userId}/following")
+    public ResponseEntity<StandardResponse<PagedUserPreviewDto>> getFollowingProfiles(
+            @AuthenticationPrincipal UUID viewerUserId,
+            @PathVariable("userId") UUID userId,
+            @RequestParam(name = "page", defaultValue = "0") int page,
+            @RequestParam(name = "size", defaultValue = "20") int size
+    ) {
+        Page<UserPreviewDto> pagedData = userService.getFollowing(userId, page, size);
+        return ResponseEntity.ok(StandardResponse.success(getPagedUserPreviewResponse(pagedData)));
+    }
+
+    @Operation(summary = "Get following of user", description = "Get a list of users that a given user follows")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Successfully retrieved following list"),
+            @ApiResponse(responseCode = "404", description = "User not found")
+    })
+    @GetMapping("{userId}/followers")
+    public ResponseEntity<StandardResponse<PagedUserPreviewDto>> getFollowersProfiles(
+            @AuthenticationPrincipal UUID viewerUserId,
+            @PathVariable("userId") UUID userId,
+            @RequestParam(name = "page", defaultValue = "0") int page,
+            @RequestParam(name = "size", defaultValue = "20") int size
+    ) {
+        Page<UserPreviewDto> pagedData = userService.getFollowers(userId, page, size);
+        return ResponseEntity.ok(StandardResponse.success(getPagedUserPreviewResponse(pagedData)));
+    }
     /* END - User follows/followers */
 
     @ExceptionHandler(UserFollowException.class)
