@@ -5,6 +5,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import space.banterbox.feature.notification.NotificationManager;
 import space.banterbox.feature.user.dto.response.UserPreviewDto;
 import space.banterbox.feature.user.dto.response.UserProfileDto;
 import space.banterbox.feature.user.exception.UserFollowException;
@@ -25,6 +26,7 @@ public class UserService {
     private final UserRepository userRepository;
     private final FollowRepository followRepository;
     private final UserMapper userMapper;
+    private final NotificationManager notificationManager;
 
     public UserProfileDto follow(UUID currentUserId, UUID targetUserId) {
         var id = UsersFollowerId.builder()
@@ -46,6 +48,10 @@ public class UserService {
                 .following(following)
                 .build();
         followRepository.save(relationship);
+
+        // Create notifications for follower and followed users
+        notificationManager.createFollowedNotification(follower, following);
+        notificationManager.createFollowingNotification(follower, following);
 
         // Return the updated target user profile
         return enrichUserProfile(following, follower);

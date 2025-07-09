@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
-  <component name="JpaBuddyIdeaProjectConfig">
-    <option name="reLastEntityCreationPackage" value="Banterbox/src/main/java/space/banterbox/feature/user/model" />
+  <component name="JpaBuddyIdeaProjectConfig" newRepositoryParent="org.springframework.data.jpa.repository.JpaRepository">
+    <option name="reLastEntityCreationPackage" value="Banterbox/src/main/java/space/banterbox/feature/notification/model" />
     <option name="reverseEngineeringLastDbConnectionId" value="4ec0819d-ded6-4864-a43e-73b18cf2725b" />
   </component>
 </project>

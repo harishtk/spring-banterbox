@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
+import space.banterbox.feature.notification.NotificationManager;
 import space.banterbox.feature.post.dto.AuthorDto;
 import space.banterbox.feature.post.dto.PostDto;
 import space.banterbox.feature.post.dto.PostFeedDto;
@@ -33,6 +34,7 @@ public class PostService {
     private final PostMapper postMapper;
     private final PostLikeRepository postLikeRepository;
     private final AuthorMapper authorMapper;
+    private final NotificationManager notificationManager;
 
     public PostWithAuthorDto createPost(UUID userId, String content) {
         Post post = new Post();
@@ -105,6 +107,9 @@ public class PostService {
         like.setPost(post);
 
         postLikeRepository.save(like);
+
+        notificationManager.createPostLikedNotification(userId, postId);
+
         // Returning an updated post
         return getPostById(postId, userId);
     }

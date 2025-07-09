@@ -159,6 +159,11 @@
 				<groupId>org.flywaydb</groupId>
 				<artifactId>flyway-maven-plugin</artifactId>
 				<version>${flyway.version}</version>
+				<configuration>
+					<url>jdbc:postgresql://localhost:5432/banterbox_db</url>
+					<user>postgres</user>
+					<password>postgres</password>
+				</configuration>
 			</plugin>
 		</plugins>
 	</build>
