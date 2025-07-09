@@ -8,6 +8,7 @@ import space.banterbox.feature.user.dto.request.UpdateUserRequestDto;
 import space.banterbox.feature.user.dto.response.UserPreviewDto;
 import space.banterbox.feature.user.dto.response.UserProfileDto;
 import space.banterbox.feature.user.model.User;
+import space.banterbox.feature.user.projection.UserPreviewProjection;
 
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface UserMapper {
@@ -19,6 +20,9 @@ public interface UserMapper {
     UserProfileDto toDto(User user);
 
     UserPreviewDto toPreviewDto(User user);
+
+    @Mapping(target = "isFollowing", source = "followedByCurrentUser")
+    UserPreviewDto toPreviewDto(UserPreviewProjection userPreviewProjection);
 
     void updateUser(UpdateUserRequestDto updateUserRequestDto, @MappingTarget User user);
 }

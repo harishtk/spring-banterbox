@@ -83,4 +83,28 @@ public interface PostRepository extends JpaRepository<Post, UUID> {
         GROUP BY p.id, p.content, p.createdAt, p.updatedAt, p.author
     """)
     Optional<PostWithLikes> findPostWithLikes(@Param("postId") UUID postId, @Param("currentUserId") UUID currentUserId);
+
+    @Query("""
+        SELECT
+            p.id as id,
+            p.content as content,
+            p.createdAt as createdAt,
+            p.updatedAt as updatedAt,
+            p.author.id as authorId,
+            p.author as author,
+            COUNT(DISTINCT pl.id) as likesCount,
+            EXISTS (
+                SELECT 1 FROM PostLike ul
+                WHERE ul.post = p
+                AND ul.user.id = :currentUserId
+            ) as likedByCurrentUser
+        FROM Post p
+        LEFT JOIN PostLike pl ON pl.post.id = p.id
+        WHERE LOWER(p.content) LIKE LOWER(CONCAT('%', :query, '%'))
+        GROUP BY p.id, p.content, p.createdAt, p.updatedAt, p.author
+        ORDER BY p.createdAt DESC
+    """)
+    Page<PostWithLikes> searchByContent(@Param("query") String query,
+                                        @Param("currentUserId") UUID currentUserId,
+                                        Pageable pageable);
 }

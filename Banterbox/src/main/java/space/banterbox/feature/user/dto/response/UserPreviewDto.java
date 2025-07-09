@@ -6,5 +6,6 @@ public record UserPreviewDto(
         UUID id,
         String username,
         String displayName,
-        String profilePictureId
+        String profilePictureId,
+        Boolean isFollowing
 ) {}

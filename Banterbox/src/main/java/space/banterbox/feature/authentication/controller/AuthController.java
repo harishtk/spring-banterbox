@@ -106,7 +106,7 @@ public class AuthController {
             @ApiResponse(responseCode = "200", description = "New access token generated"),
             @ApiResponse(responseCode = "401", description = "Invalid refresh token")
     })
-    @PostMapping("/refresh")
+    @PostMapping(value = "/refresh")
     public ResponseEntity<StandardResponse<JwtResponse>> refresh(@CookieValue("refreshToken") String refreshToken) {
         var accessToken = authService.refreshAccessToken(refreshToken);
         return ResponseEntity.ok(StandardResponse.success(new JwtResponse(accessToken.toString(), refreshToken)));
